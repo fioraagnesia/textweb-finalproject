@@ -3,7 +3,7 @@ import pandas as pd
 import pickle as pkl
 import matplotlib.pyplot as plt
 import joblib
-from cleaning.cleaning import clean_text_only
+from preprocessing.cleaning import clean_text_only
 import seaborn as sns
 import plotly.express as px
 
