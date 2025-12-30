@@ -25,9 +25,9 @@ if menu == "Pendeteksi Berita Palsu":
     # Load your model (use @st.cache_resource to prevent reloading every time)
     @st.cache_resource
     def load_model():
-        with open('models/model_lg.pkl', 'rb') as file:
+        with open('models/model_lg (1).pkl', 'rb') as file:
             model = pkl.load(file)
-        with open('models/tfidf_vectorizer.pkl', 'rb') as file:
+        with open('models/tfidf_vectorizer (2).pkl', 'rb') as file:
             vectorizer = pkl.load(file)
         return model, vectorizer
 
