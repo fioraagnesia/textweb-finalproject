@@ -116,6 +116,10 @@ elif menu == "Overview Data":
         else:
             st.warning("Kolom 'date' tidak ditemukan atau tidak dapat diproses.")
 
+        # 4. Wordcloud Kata di Hoax dan Fakta
+        st.subheader("☁️ Wordcloud Kata Umum")
+        st.image("wordcloud_hoax_fakta.png", caption="Semakin besar kata, semakin berbobot dalam penentuan hoax atau fakta.")
+
     except FileNotFoundError:
         st.error("File 'cleaned_news.xlsx' tidak ditemukan. Pastikan Anda sudah menjalankan proses cleaning terlebih dahulu.")
     except Exception as e:
