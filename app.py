@@ -19,7 +19,7 @@ menu = st.sidebar.radio("Telusuri:", ["Pendeteksi Berita Palsu", "Overview Data"
 # --- PAGE 1: CLASSIFIER ---
 if menu == "Pendeteksi Berita Palsu":
     st.title("🛡️ Pendeteksi Berita Palsu")
-    st.write("Silahkan ketik atau tempel berita yang ingin Anda analisis di bawah ini.")
+    st.write("Silahkan ketik atau tempel narasi berita yang ingin Anda analisis di bawah ini.")
     st.markdown("<span style='font-weight:bold;color:red'>Hasil analisa baik hanya bila input berbahasa Indonesia.</span>", unsafe_allow_html=True)
     
     # Load your model (use @st.cache_resource to prevent reloading every time)
