@@ -222,10 +222,10 @@ def status_to_label(status):
 
 # LOAD & LABEL DATA
 paths = [
-    "news_turnbackhoax fix.csv",
-    "news_antaranews fix.csv",
-    "news_kompascom fix.csv",
-    "news_tempo fix.csv",
+    "news_turnbackhoax.csv",
+    "news_antaranews.csv",
+    "news_kompascom.csv",
+    "news_tempo.csv",
 ]
 
 dfs = []
