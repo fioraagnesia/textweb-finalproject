@@ -199,36 +199,42 @@ def preprocess_df(df):
 def status_to_label(status):
     return 1 if str(status).strip().lower() == "hoax" else 0
 
-# LOAD & LABEL DATA
-paths = [
-    "news_turnbackhoax fix.csv",
-    "news_antaranews fix.csv",
-    "news_kompascom fix.csv",
-    "news_tempo fix.csv",
-]
+def clean_text_only(text):
+    text = clean_text(text)
+    text = normalize_text(text)
+    return text
 
-dfs = []
+if __name__ == "__main__":
+    # LOAD & LABEL DATA
+    paths = [
+        "news_turnbackhoax.csv",
+        "news_antaranews.csv",
+        "news_kompascom.csv",
+        "news_tempo.csv",
+    ]
 
-for path in paths:
-    df = pd.read_csv(path)
-    df = preprocess_df(df)
+    dfs = []
 
-    if "status" not in df.columns:
-        raise ValueError(f"Kolom 'status' tidak ada di {path}")
+    for path in paths:
+        df = pd.read_csv(path)
+        df = preprocess_df(df)
 
-    df["label"] = df["status"].apply(status_to_label)
-    dfs.append(df)
+        if "status" not in df.columns:
+            raise ValueError(f"Kolom 'status' tidak ada di {path}")
 
-final_df = pd.concat(dfs, ignore_index=True)
-final_df = final_df.sample(frac=1, random_state=42)
+        df["label"] = df["status"].apply(status_to_label)
+        dfs.append(df)
 
-# SAVE TO EXCEL
-final_df.to_excel(
-    "cleaned_news.xlsx",
-    index=False,
-    engine="openpyxl"
-)
+    final_df = pd.concat(dfs, ignore_index=True)
+    final_df = final_df.sample(frac=1, random_state=42)
 
-print("CLEANING DONE")
-print("Total data:", len(final_df))
-print(final_df[["clean_title", "label"]].head())
+    # SAVE TO EXCEL
+    final_df.to_excel(
+        "cleaned_news.xlsx",
+        index=False,
+        engine="openpyxl"
+    )
+
+    print("CLEANING DONE")
+    print("Total data:", len(final_df))
+    print(final_df[["clean_title", "label"]].head())
