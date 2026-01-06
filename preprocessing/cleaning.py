@@ -11,9 +11,11 @@ from nltk.corpus import stopwords
 
 stemmer = StemmerFactory().create_stemmer()
 
+# ambil stopwords indo n eng
 stopwords_id = set(StopWordRemoverFactory().get_stop_words())
 stopwords_en = set(stopwords.words("english"))
 
+# stopwords -> kecuali negasi
 NEGATION_WORDS = {"tidak", "bukan", "belum", "tanpa"}
 ALL_STOPWORDS = (stopwords_id | stopwords_en) - NEGATION_WORDS
 
@@ -41,7 +43,7 @@ def remove_media_noise(text):
         text = re.sub(p, ' ', text, flags=re.DOTALL)
     return text
 
-# TITLE CLEANING (CUSTOM)
+# TITLE CLEANING (hapus prefix pattern kayak hoaks!, fakta!, salah!, dll.)
 TITLE_PREFIX_PATTERN = r'''
 ^(
     \[?\s*(salah|keliru|hoaks?|hoax|klarifikasi|penipuan|misinformasi)\s*\]? |
@@ -78,6 +80,7 @@ def clean_title(title):
 def clean_text(text):
     text = str(text).lower()
 
+    #remove media noise
     text = remove_media_noise(text)
 
     # remove html & url
@@ -96,6 +99,7 @@ def clean_text(text):
 
     return text
 
+#kalau ada kata yg kegabung panjang, split dengan stopwords
 def split_stuck_words(token):
     if len(token) < 20:
         return [token]
@@ -114,6 +118,7 @@ def split_stuck_words(token):
 
     return parts
 
+
 def normalize_text(text):
     tokens = text.split()
     final_tokens = []
@@ -125,21 +130,21 @@ def normalize_text(text):
             split_tokens = [t]
 
         for s in split_tokens:
-            if s not in ALL_STOPWORDS and len(s) > 2:
+            if s not in ALL_STOPWORDS and len(s) > 2: #hapus yg token lemah kyk di, ke, yg
                 try:
-                    final_tokens.append(stemmer.stem(s))
+                    final_tokens.append(stemmer.stem(s)) #lakukan stemming
                 except:
                     continue
 
     return " ".join(final_tokens)
 
-# WEIRD DATA FILTER
+# WEIRD DATA FILTER -> judul pendek, narasi pendek
 def is_weird_row(title, narasi, penjelasan=""):
     if len(title.split()) < 3:
         return True
     if len(narasi.split()) < 10:
         return True
-    if penjelasan and len(penjelasan.split()) < 5:
+    if penjelasan and len(penjelasan.split()) < 5: #penjelasan pendek tok buang
         return True
     return False
 
@@ -202,10 +207,10 @@ def clean_text_only(text):
 if __name__ == "__main__":
     # LOAD & LABEL DATA
     paths = [
-        "news_turnbackhoax fix.csv",
-        "news_antaranews fix.csv",
-        "news_kompascom fix.csv",
-        "news_tempo fix.csv",
+        "news_turnbackhoax.csv",
+        "news_antaranews.csv",
+        "news_kompascom.csv",
+        "news_tempo.csv",
     ]
 
     dfs = []
