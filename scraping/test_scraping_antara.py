@@ -1,52 +1,39 @@
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 import pandas as pd
 import time
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-import requests
+import re
+from requests.exceptions import RequestException
 
 # === CONFIGURATIONS ===
-BASE_URL = "https://www.tempo.co"
-LIST_PAGE_URL = f"{BASE_URL}/indeks?category=contentCategory&content_category=berita&page="
+BASE_URL = "https://www.antaranews.com"
+LIST_PAGE_URL = f"{BASE_URL}/terkini/"
 # Set the total number of articles you want to process
-MAX_LIMIT = 2500 # scraping raw data
-# MAX_LIMIT = 200  # scraping test data
+MAX_LIMIT = 200  # scraping test data
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
     'Accept-Language': 'en-US,en;q=0.5',
     'Referer': BASE_URL 
 }
 
-session = requests.Session()
-retry = Retry(
-    total=10,
-    backoff_factor=2,
-    status_forcelist=[500, 502, 503, 504, 429]
-)
-adapter = HTTPAdapter(max_retries=retry)
-session.mount("http://", adapter)
-session.mount("https://", adapter)
-
-
 # --- LINK HARVESTING FUNCTION (Index Page) ---
 def get_all_links_url(max_limit):
     """
-    Collects article links from the Tempo.co index pages using pagination.
+    Collects article links from the Antara News index pages using pagination.
     """
     all_links = set()
     page_counter = 1
-    LINK_SELECTOR = 'figure.contents a'     # Link selector for Tempo.co
+    LINK_SELECTOR = 'a[href*="/berita/"]'     # Link selector for antaranews
 
-    # Looping each page until the total links has reached the max_limit 
+    # Looping each page until the total links has reached the max_limit
     while len(all_links) < max_limit:
         page_url = f"{LIST_PAGE_URL}{page_counter}"
         print(f"\n--- Collecting links from Page {page_counter} (Collected: {len(all_links)}/{max_limit}) ---")
+        
         time.sleep(5.0)
 
         try:
-            response = session.get(page_url, headers=HEADERS, timeout=15)
+            response = requests.get(page_url, headers=HEADERS, timeout=15)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
 
@@ -59,14 +46,13 @@ def get_all_links_url(max_limit):
 
                 relative_url = link_tag.get('href')
                 
-                # # Filter and add valid absolute URL (/read/...)
-                if relative_url and relative_url.startswith('/'):
-                    absolute_url = urljoin(BASE_URL, relative_url)
-                    all_links.add(absolute_url)
+                # Filter and add valid absolute URL
+                if relative_url and relative_url.startswith('https://'):
+                    all_links.add(relative_url)
 
             links_added = len(all_links) - links_before_update
 
-             # Stop Condition: If no new unique links are found
+            # Stop Condition: If no new unique links are found
             if links_added == 0 and page_counter > 1:
                 print("No new unique links found. Stopping index scraping.")
                 break
@@ -77,7 +63,7 @@ def get_all_links_url(max_limit):
             # Move to the next page
             page_counter += 1
 
-        except requests.exceptions.RequestException as e:
+        except RequestException as e:
             print(f"Failed to load page {page_url}. Error: {e}. Stopping.")
             break
 
@@ -87,18 +73,18 @@ def get_all_links_url(max_limit):
 # --- DATA EXTRACTION FUNCTION (Scrape Article Detail) ---
 def scrape_full_article(article_url):
     """Fetches a single article and extracts the full content using requests."""
-    # CSS Selectors (Tempo Article Page)
+    # CSS Selectors (Antara News Article Page)
     TITLE_SELECTOR = 'h1' 
-    CATEGORY_SELECTOR = 'div.flex span.text-sm.font-medium.text-primary-main' 
-    DATE_SELECTOR = 'p.text-neutral-900.text-sm' 
-    ARTICLE_SELECTOR = 'div#content-wrapper, div[data-innity-container="article"]' # Selector for the main article body
+    SOURCE_CATEGORY_SELECTOR = 'ul.breadcrumbs li.breadcrumbs__item a' 
+    DATE_SELECTOR = 'div.wrap__article-detail-info span'
+    ARTICLE_SELECTOR = 'div.post-content, div.post-content.clearfix, div.content-text'
 
     try:
-        response = session.get(article_url, headers=HEADERS, timeout=15)
+        response = requests.get(article_url, headers=HEADERS, timeout=15)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         # Metadata defaults
-        title, category, source, publication_date, narasi_text = 'N/A', 'N/A', 'tempo.co', 'N/A', 'N/A'
+        title, category, source, publication_date, narasi_text= 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
 
         # --- Extract Metadata ---
         # 1. Title
@@ -107,43 +93,46 @@ def scrape_full_article(article_url):
              title = title_element.get_text(strip=True)
         
         # 2. Category (last item in breadcrumb)
-        category_element = soup.select(CATEGORY_SELECTOR)
+        category_element = soup.select(SOURCE_CATEGORY_SELECTOR)
         if category_element:
-            category = category_element[-1].get_text(strip=True)
+            category = category_element[-2].get_text(strip=True)
         
-        # 3. Date
+        # 3. Source
+        source_element = soup.select(SOURCE_CATEGORY_SELECTOR)
+        if source_element:
+            source = source_element[0].get_text(strip=True)
+
+        # 4. Date 
         date_container = soup.select_one(DATE_SELECTOR)
+
         if date_container:
             date_text = date_container.get_text(separator=' ', strip=True)
             
-            # Ex: "4 Desember 2025 | 18.00 WIB"
-            # Separate by '|'
-            parts = date_text.split('|')
+            # Ex: "Kamis, 4 Desember 2025 18:00 WIB"
+            # Separate the data by comma
+            parts = date_text.split(',')
             if len(parts) >= 2:
-                # First part: date (result: "4 Desember 2025")
-                publication_date = parts[0].strip() 
-
-        # 4. Full Text (Narasi)
-        all_article_wrappers = soup.select(ARTICLE_SELECTOR)     # main container for the article
-        cleaned_paragraphs = []
+                # Second part: date (result: "4 Desember 2025 18:00 WIB")
+                full_date = parts[1].strip()
+                # To get the date only (without time)
+                publication_date = re.sub(r'\s*\d{1,2}[:.]\d{2}\s*(WIB|WITA|WIT)?', '', full_date).strip()
         
-        if all_article_wrappers:
-            # Loop every container found
-            for wrapper in all_article_wrappers:
-                # Find all <p> tags inside the wrapper
-                paragraphs = wrapper.find_all('p') 
-                # Looping to get all the paragraphs
-                for p in paragraphs:
-                    text_content = p.get_text(strip=True)
+    
+        # 5. Full Text (Narasi & Penjelasan)
+        article_wrapper = soup.select_one(ARTICLE_SELECTOR)     # main container for the article
 
-                    # Filter the contents
-                    if 'Pilihan Editor:' in text_content:
-                      break
-                    if text_content and len(text_content) > 30 and 'ADVERTISEMENT' not in text_content.upper():
-                        cleaned_paragraphs.append(text_content)
+        if article_wrapper:
+            paragraphs = article_wrapper.find_all('p')
+            cleaned_narasi = []
+           
+            for p in paragraphs:
+                text_content = p.get_text(strip=True)
 
-            # Join all paragraphs from all wrappers
-            narasi_text = '\n\n'.join(cleaned_paragraphs)
+                if text_content and len(text_content) > 10 and 'IKLAN' not in text_content.upper() and 'Baca juga:' not in text_content:
+                        cleaned_narasi.append(text_content)
+            
+            # Join all paragraphs
+                narasi_text = '\n\n'.join(cleaned_narasi)
 
         return {
             'title': title,
@@ -152,7 +141,6 @@ def scrape_full_article(article_url):
             'category': category,
             'narasi': narasi_text,
             'url': article_url,
-            'status': 'fact',
         }
 
     except requests.exceptions.RequestException as e:
@@ -185,18 +173,10 @@ for i, link in enumerate(all_article_links_list):
     time.sleep(5.0)
 
 
-# --- Save Raw Data ---
+# --- Save Test Data ---
 if final_scraped_data:
     df = pd.DataFrame(final_scraped_data)
-    df.to_csv('news_tempo.csv', index=False, encoding='utf-8-sig')
-    print(f"\nSuccess! Scraped a total of {len(final_scraped_data)} full articles and saved to news_tempo.csv")
+    df.to_csv('test_news_antaranews.csv', index=False, encoding='utf-8-sig')
+    print(f"\nSuccess! Scraped a total of {len(final_scraped_data)} full articles and saved to test_news_antaranews.csv")
 else:
     print("\nNo full article content was scraped in the end.")
-
-# --- Save Test Data ---
-# if final_scraped_data:
-#     df = pd.DataFrame(final_scraped_data)
-#     df.to_csv('test_news_tempo.csv', index=False, encoding='utf-8-sig')
-#     print(f"\nSuccess! Scraped a total of {len(final_scraped_data)} full articles and saved to test_news_tempo.csv")
-# else:
-#     print("\nNo full article content was scraped in the end.")
