@@ -7,7 +7,9 @@ from requests.exceptions import RequestException
 # === CONFIGURATIONS ===
 BASE_URL = "https://indeks.kompas.com"
 LIST_PAGE_URL = f"{BASE_URL}/?page="
-MAX_LIMIT = 1000 # Set the total number of articles you want to process
+# Set the total number of articles you want to process
+MAX_LIMIT = 1000 # scraping raw data
+# MAX_LIMIT = 200  # scraping test data
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
     'Accept-Language': 'en-US,en;q=0.5',
@@ -166,10 +168,18 @@ for i, link in enumerate(all_article_links_list):
     time.sleep(5.0)
 
 
-# --- Save Data ---
+# --- Save Raw Data ---
 if final_scraped_data:
     df = pd.DataFrame(final_scraped_data)
     df.to_csv('news_kompascom.csv', index=False, encoding='utf-8-sig')
     print(f"\nSuccess! Scraped a total of {len(final_scraped_data)} full articles and saved to news_kompascom.csv")
 else:
     print("\nNo full article content was scraped in the end.")
+
+# --- Save Test Data ---
+# if final_scraped_data:
+#     df = pd.DataFrame(final_scraped_data)
+#     df.to_csv('test_news_kompascom.csv', index=False, encoding='utf-8-sig')
+#     print(f"\nSuccess! Scraped a total of {len(final_scraped_data)} full articles and saved to news_kompascom.csv")
+# else:
+#     print("\nNo full article content was scraped in the end.")
